@@ -3,39 +3,13 @@ const CarbonProject = require('../models/CarbonProject');
 const EnergyEntry = require('../models/EnergyEntry');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const fs = require('fs');
 const path = require('path');
-const dns = require('dns').promises;
 const Report = require('../models/Report');
 
 const router = express.Router();
-
-// Helper to guarantee IPv4 connection for Gmail
-async function getEmailTransporter() {
-    let host = 'smtp.gmail.com';
-    try {
-        const addresses = await dns.resolve4('smtp.gmail.com');
-        if (addresses && addresses.length > 0) {
-            host = addresses[0]; // Force IPv4 IP address
-        }
-    } catch (err) {
-        console.error('DNS resolve4 failed:', err);
-    }
-    
-    return nodemailer.createTransport({
-        host: host,
-        port: 465,
-        secure: true,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
-        tls: {
-            servername: 'smtp.gmail.com' // Required since we are connecting via IP
-        }
-    });
-}
 
 // GET /api/reports — comprehensive report data
 router.get('/', auth, async (req, res) => {
@@ -105,7 +79,7 @@ router.post('/email/legacy', auth, async (req, res) => {
         const transporter = await getEmailTransporter();
 
         const mailOptions = {
-            from: `"Carbonil Pasumai" <${process.env.SMTP_USER}>`,
+            from: 'Carbonil Pasumai <onboarding@resend.dev>',
             to: targetEmail,
             subject: 'Carbonil Pasumai - Carbon Assessment Report (Summary)',
             html: `
@@ -127,12 +101,19 @@ router.post('/email/legacy', auth, async (req, res) => {
             `
         };
 
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            return res.status(400).json({ message: 'Email configuration missing on server (SMTP_USER, SMTP_PASS)' });
+        );
         }
 
         try {
-            await transporter.sendMail(mailOptions);
+            const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
+            const resendData = await resend.emails.send({
+                from: mailOptions.from,
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                html: mailOptions.html,
+                attachments: fileBuffer ? [{ filename: mailOptions.attachments[0].filename, content: fileBuffer }] : undefined
+            });
+            if (resendData.error) throw new Error(resendData.error.message);
         } catch (emailErr) {
             console.error('Email sending blocked (likely Railway SMTP port restriction):', emailErr.message);
             // Continue execution so the report is still processed
@@ -155,8 +136,7 @@ router.post('/email', auth, async (req, res) => {
             return res.status(400).json({ message: 'No email address provided.' });
         }
 
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            return res.status(400).json({ message: 'Email configuration missing on server (SMTP_USER, SMTP_PASS)' });
+        );
         }
 
         const projects = await CarbonProject.find({ userId: req.user.id });
@@ -206,7 +186,7 @@ router.post('/email', auth, async (req, res) => {
         const transporter = await getEmailTransporter();
 
         const mailOptions = {
-            from: `"Carbonil Pasumai" <${process.env.SMTP_USER}>`,
+            from: 'Carbonil Pasumai <onboarding@resend.dev>',
             to: targetEmail,
             subject: 'Carbonil Pasumai – AI Carbon Assessment Report',
             html: `
@@ -244,7 +224,15 @@ router.post('/email', auth, async (req, res) => {
         // 3. Send Email (Wrapped in try-catch because Railway blocks SMTP ports)
         let emailStatus = 'Sent';
         try {
-            await transporter.sendMail(mailOptions);
+            const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
+            const resendData = await resend.emails.send({
+                from: mailOptions.from,
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                html: mailOptions.html,
+                attachments: fileBuffer ? [{ filename: mailOptions.attachments[0].filename, content: fileBuffer }] : undefined
+            });
+            if (resendData.error) throw new Error(resendData.error.message);
         } catch (emailErr) {
             console.error('Email sending blocked by Railway firewall:', emailErr.message);
             emailStatus = 'Failed';
@@ -293,14 +281,13 @@ router.post('/:id/email', auth, async (req, res) => {
             return res.status(404).json({ message: 'PDF file for this report could not be found on the server.' });
         }
 
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            return res.status(400).json({ message: 'Email configuration missing on server (SMTP_USER, SMTP_PASS)' });
+        );
         }
 
         const transporter = await getEmailTransporter();
 
         const mailOptions = {
-            from: `"Carbonil Pasumai" <${process.env.SMTP_USER}>`,
+            from: 'Carbonil Pasumai <onboarding@resend.dev>',
             to: targetEmail,
             subject: 'Carbonil Pasumai – AI Carbon Assessment Report',
             html: `
@@ -337,7 +324,15 @@ router.post('/:id/email', auth, async (req, res) => {
 
         let emailStatus = 'Sent';
         try {
-            await transporter.sendMail(mailOptions);
+            const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
+            const resendData = await resend.emails.send({
+                from: mailOptions.from,
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                html: mailOptions.html,
+                attachments: fileBuffer ? [{ filename: mailOptions.attachments[0].filename, content: fileBuffer }] : undefined
+            });
+            if (resendData.error) throw new Error(resendData.error.message);
         } catch (emailErr) {
             console.error('Email sending blocked by Railway firewall:', emailErr.message);
             emailStatus = 'Failed';
