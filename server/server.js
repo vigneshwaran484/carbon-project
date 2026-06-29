@@ -30,8 +30,9 @@ app.use((req, res, next) => {
 const corsOptions = {
     origin: [
         'http://localhost:5173',
-        'https://carbon-project-rho.vercel.app'
-    ],
+        'https://carbon-project-rho.vercel.app',
+        process.env.CLIENT_URL
+    ].filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
