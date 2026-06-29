@@ -247,7 +247,7 @@ router.post('/email', auth, async (req, res) => {
             await transporter.sendMail(mailOptions);
         } catch (emailErr) {
             console.error('Email sending blocked by Railway firewall:', emailErr.message);
-            emailStatus = 'Failed (Railway SMTP Block)';
+            emailStatus = 'Failed';
         }
 
         // 4. Save to DB
@@ -340,7 +340,7 @@ router.post('/:id/email', auth, async (req, res) => {
             await transporter.sendMail(mailOptions);
         } catch (emailErr) {
             console.error('Email sending blocked by Railway firewall:', emailErr.message);
-            emailStatus = 'Failed (Railway SMTP Block)';
+            emailStatus = 'Failed';
         }
         
         // Update email status
