@@ -1,6 +1,19 @@
 require('dotenv').config();
+
+// Force all DNS lookups to IPv4 — Railway does not support IPv6 outbound
 const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+const origLookup = dns.lookup.bind(dns);
+dns.lookup = (hostname, options, callback) => {
+    if (typeof options === 'function') {
+        callback = options;
+        options = { family: 4 };
+    } else if (typeof options === 'object' && options !== null) {
+        options.family = 4;
+    } else {
+        options = { family: 4 };
+    }
+    return origLookup(hostname, options, callback);
+};
 
 const express = require('express');
 const cors = require('cors');
