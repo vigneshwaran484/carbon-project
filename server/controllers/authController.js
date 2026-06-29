@@ -5,7 +5,7 @@ const User = require('../models/User');
 // POST /api/auth/register
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, organization, phone, orgType } = req.body;
 
         const existing = await User.findOne({ email });
         if (existing) return res.status(400).json({ message: 'Email already registered' });
@@ -13,11 +13,16 @@ exports.register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashed = await bcrypt.hash(password, salt);
 
+        const role = organization ? 'organization' : 'individual';
+
         const user = await User.create({
             name,
             email,
             password: hashed,
-            role: role || 'individual',
+            organization,
+            phone,
+            orgType,
+            role,
         });
 
         const token = jwt.sign(
@@ -31,7 +36,15 @@ exports.register = async (req, res) => {
             user: { id: user._id, name: user.name, email: user.email, role: user.role, points: user.points },
         });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('--- REGISTRATION ERROR ---');
+        console.error('Status Code: 500');
+        console.error('Error Message:', err.message);
+        console.error('Stack Trace:', err.stack);
+        
+        res.status(500).json({ 
+            message: err.name === 'ValidationError' ? err.message : 'Internal server error during registration',
+            error: err.message
+        });
     }
 };
 

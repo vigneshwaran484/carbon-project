@@ -24,10 +24,15 @@ export default function Register() {
         if (form.password !== form.confirmPassword) return setError('Passwords do not match');
         setLoading(true);
         try {
-            await register(form.name, form.email, form.password, form.organization);
+            await register(form.name, form.email, form.password, form.organization, form.phone, form.orgType);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed');
+            console.error('Registration Error:', err);
+            const backendMsg = err.response?.data?.message;
+            const fallbackMsg = err.message === 'Network Error' 
+                ? 'Cannot connect to server. Please try again.' 
+                : 'Registration failed';
+            setError(backendMsg || fallbackMsg);
         } finally {
             setLoading(false);
         }
