@@ -6,28 +6,73 @@ const connectDB = require('./config/db');
 
 const app = express();
 
-// ===============================
+// ====================================
+// Connect MongoDB
+// ====================================
+connectDB();
+
+// ====================================
 // Request Logger
-// ===============================
+// ====================================
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
+    console.log(`${req.method} ${req.originalUrl}`);
     next();
 });
 
-// ===============================
+// ====================================
+// CORS Configuration
+// ====================================
+const corsOptions = {
+    origin: [
+        'http://localhost:5173',
+        'https://carbon-project-rho.vercel.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// ====================================
 // Middleware
-// ===============================
-app.use(cors());
+// ====================================
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ===============================
-// Connect MongoDB
-// ===============================
-connectDB();
+// ====================================
+// Debug Routes
+// ====================================
+app.get('/', (req, res) => {
+    console.log('✅ GET /');
+    res.send('Backend Working');
+});
 
-// ===============================
+app.get('/api/test', (req, res) => {
+    console.log('✅ GET /api/test');
+
+    res.json({
+        success: true,
+        message: 'API is working'
+    });
+});
+
+app.get('/api/health', (req, res) => {
+    console.log('✅ GET /api/health');
+
+    res.json({
+        success: true,
+        status: 'ok',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ====================================
 // API Routes
-// ===============================
+// ====================================
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/energy', require('./routes/energy'));
 app.use('/api/energy-log', require('./routes/energyLog'));
@@ -39,37 +84,11 @@ app.use('/api/insights', require('./routes/insights'));
 app.use('/api/ecobot', require('./routes/ecobot'));
 app.use('/api/documents', require('./routes/documents'));
 
-// ===============================
-// Debug Routes
-// ===============================
-app.get('/', (req, res) => {
-    console.log('✅ GET / route executed');
-    res.send('Backend Working');
-});
-
-app.get('/api/test', (req, res) => {
-    console.log('✅ GET /api/test route executed');
-
-    res.status(200).json({
-        success: true,
-        message: 'API is working'
-    });
-});
-
-app.get('/api/health', (req, res) => {
-    console.log('✅ GET /api/health route executed');
-
-    res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// ===============================
+// ====================================
 // 404 Handler
-// ===============================
+// ====================================
 app.use((req, res) => {
-    console.log(`❌ No Route Matched -> ${req.method} ${req.originalUrl}`);
+    console.log(`❌ Route Not Found -> ${req.method} ${req.originalUrl}`);
 
     res.status(404).json({
         success: false,
@@ -79,12 +98,24 @@ app.use((req, res) => {
     });
 });
 
-console.log("========== SERVER VERSION 3 ==========");
+// ====================================
+// Global Error Handler
+// ====================================
+app.use((err, req, res, next) => {
+    console.error(err.stack);
 
-// ===============================
+    res.status(500).json({
+        success: false,
+        message: 'Internal Server Error'
+    });
+});
+
+// ====================================
 // Start Server
-// ===============================
+// ====================================
 const PORT = process.env.PORT || 5000;
+
+console.log('========== SERVER VERSION 4 ==========');
 
 app.listen(PORT, () => {
     console.log(`🚀 Carbonil Pasumai Server running on port ${PORT}`);
