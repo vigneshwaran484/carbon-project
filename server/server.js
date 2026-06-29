@@ -37,8 +37,11 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization']
 };
 
+// Enable CORS
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+
+// ❌ REMOVE THIS LINE
+// app.options('*', cors(corsOptions));
 
 // ====================================
 // Middleware
@@ -79,6 +82,7 @@ app.get('/api/health', (req, res) => {
 let authRoutes;
 
 try {
+
     authRoutes = require('./routes/auth');
 
     console.log('✅ Auth router loaded successfully');
