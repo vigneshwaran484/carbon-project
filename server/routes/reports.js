@@ -77,8 +77,8 @@ router.post('/email/legacy', auth, async (req, res) => {
 
         const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
+            port: 465,
+            secure: true,
             family: 4,
             auth: {
                 user: process.env.SMTP_USER,
@@ -182,8 +182,8 @@ router.post('/email', auth, async (req, res) => {
         // 2. Prepare Email Options
         const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
+            port: 465,
+            secure: true,
             family: 4,
             auth: {
                 user: process.env.SMTP_USER,
@@ -279,8 +279,8 @@ router.post('/:id/email', auth, async (req, res) => {
 
         const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
+            port: 465,
+            secure: true,
             family: 4,
             auth: {
                 user: process.env.SMTP_USER,
