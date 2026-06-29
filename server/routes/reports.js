@@ -76,7 +76,10 @@ router.post('/email/legacy', auth, async (req, res) => {
         const totalEmissions = energyData.reduce((s, e) => s + e.carbon, 0);
 
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            family: 4,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
@@ -178,7 +181,10 @@ router.post('/email', auth, async (req, res) => {
 
         // 2. Prepare Email Options
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            family: 4,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
@@ -272,7 +278,10 @@ router.post('/:id/email', auth, async (req, res) => {
         }
 
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            family: 4,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
