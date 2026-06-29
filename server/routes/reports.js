@@ -76,7 +76,6 @@ router.post('/email/legacy', auth, async (req, res) => {
         const totalCredits = projects.reduce((s, p) => s + p.credits, 0);
         const totalEmissions = energyData.reduce((s, e) => s + e.carbon, 0);
 
-        const transporter = await getEmailTransporter();
 
         const mailOptions = {
             
@@ -100,9 +99,6 @@ router.post('/email/legacy', auth, async (req, res) => {
                 </div>
             `
         };
-
-        );
-        }
 
         try {
             const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
@@ -139,9 +135,6 @@ router.post('/email', auth, async (req, res) => {
 
         if (!targetEmail) {
             return res.status(400).json({ message: 'No email address provided.' });
-        }
-
-        );
         }
 
         const projects = await CarbonProject.find({ userId: req.user.id });
@@ -187,8 +180,8 @@ router.post('/email', auth, async (req, res) => {
         // 1. Generate PDF
         const { filePath, reportId, aiAnalysis } = await generatePDFReport(user, energySummary, projectSummary, monthlyTrends);
 
+
         // 2. Prepare Email Options
-        const transporter = await getEmailTransporter();
 
         const mailOptions = {
             
@@ -290,11 +283,6 @@ router.post('/:id/email', auth, async (req, res) => {
         if (!fs.existsSync(report.pdfFilePath)) {
             return res.status(404).json({ message: 'PDF file for this report could not be found on the server.' });
         }
-
-        );
-        }
-
-        const transporter = await getEmailTransporter();
 
         const mailOptions = {
             
