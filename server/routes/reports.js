@@ -6,9 +6,36 @@ const auth = require('../middleware/auth');
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns').promises;
 const Report = require('../models/Report');
 
 const router = express.Router();
+
+// Helper to guarantee IPv4 connection for Gmail
+async function getEmailTransporter() {
+    let host = 'smtp.gmail.com';
+    try {
+        const addresses = await dns.resolve4('smtp.gmail.com');
+        if (addresses && addresses.length > 0) {
+            host = addresses[0]; // Force IPv4 IP address
+        }
+    } catch (err) {
+        console.error('DNS resolve4 failed:', err);
+    }
+    
+    return nodemailer.createTransport({
+        host: host,
+        port: 465,
+        secure: true,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+        },
+        tls: {
+            servername: 'smtp.gmail.com' // Required since we are connecting via IP
+        }
+    });
+}
 
 // GET /api/reports — comprehensive report data
 router.get('/', auth, async (req, res) => {
@@ -75,16 +102,7 @@ router.post('/email/legacy', auth, async (req, res) => {
         const totalCredits = projects.reduce((s, p) => s + p.credits, 0);
         const totalEmissions = energyData.reduce((s, e) => s + e.carbon, 0);
 
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            family: 4,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        const transporter = await getEmailTransporter();
 
         const mailOptions = {
             from: `"Carbonil Pasumai" <${process.env.SMTP_USER}>`,
@@ -180,16 +198,7 @@ router.post('/email', auth, async (req, res) => {
         const { filePath, reportId, aiAnalysis } = await generatePDFReport(user, energySummary, projectSummary, monthlyTrends);
 
         // 2. Prepare Email Options
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            family: 4,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        const transporter = await getEmailTransporter();
 
         const mailOptions = {
             from: `"Carbonil Pasumai" <${process.env.SMTP_USER}>`,
@@ -277,16 +286,7 @@ router.post('/:id/email', auth, async (req, res) => {
             return res.status(400).json({ message: 'Email configuration missing on server (SMTP_USER, SMTP_PASS)' });
         }
 
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            family: 4,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        const transporter = await getEmailTransporter();
 
         const mailOptions = {
             from: `"Carbonil Pasumai" <${process.env.SMTP_USER}>`,
