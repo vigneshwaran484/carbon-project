@@ -7,6 +7,11 @@ const connectDB = require('./config/db');
 const app = express();
 
 // ====================================
+// SERVER VERSION
+// ====================================
+console.log("========== SERVER VERSION 5 ==========");
+
+// ====================================
 // Connect MongoDB
 // ====================================
 connectDB();
@@ -33,8 +38,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// Handle preflight requests
 app.options('*', cors(corsOptions));
 
 // ====================================
@@ -71,9 +74,33 @@ app.get('/api/health', (req, res) => {
 });
 
 // ====================================
-// API Routes
+// AUTH ROUTES DEBUG
 // ====================================
-app.use('/api/auth', require('./routes/auth'));
+let authRoutes;
+
+try {
+    authRoutes = require('./routes/auth');
+
+    console.log('✅ Auth router loaded successfully');
+    console.log('Router Type:', typeof authRoutes);
+
+    app.use('/api/auth', (req, res, next) => {
+        console.log(`🔥 AUTH ROUTE HIT -> ${req.method} ${req.originalUrl}`);
+        next();
+    });
+
+    app.use('/api/auth', authRoutes);
+
+} catch (err) {
+
+    console.error('❌ Failed to load auth routes');
+    console.error(err);
+
+}
+
+// ====================================
+// Other API Routes
+// ====================================
 app.use('/api/energy', require('./routes/energy'));
 app.use('/api/energy-log', require('./routes/energyLog'));
 app.use('/api/projects', require('./routes/projects'));
@@ -88,6 +115,7 @@ app.use('/api/documents', require('./routes/documents'));
 // 404 Handler
 // ====================================
 app.use((req, res) => {
+
     console.log(`❌ Route Not Found -> ${req.method} ${req.originalUrl}`);
 
     res.status(404).json({
@@ -96,18 +124,22 @@ app.use((req, res) => {
         method: req.method,
         url: req.originalUrl
     });
+
 });
 
 // ====================================
 // Global Error Handler
 // ====================================
 app.use((err, req, res, next) => {
+
+    console.error('❌ Global Error');
     console.error(err.stack);
 
     res.status(500).json({
         success: false,
-        message: 'Internal Server Error'
+        message: err.message || 'Internal Server Error'
     });
+
 });
 
 // ====================================
@@ -115,8 +147,8 @@ app.use((err, req, res, next) => {
 // ====================================
 const PORT = process.env.PORT || 5000;
 
-console.log('========== SERVER VERSION 4 ==========');
-
 app.listen(PORT, () => {
+
     console.log(`🚀 Carbonil Pasumai Server running on port ${PORT}`);
+
 });
