@@ -3,13 +3,35 @@ const CarbonProject = require('../models/CarbonProject');
 const EnergyEntry = require('../models/EnergyEntry');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
 const fs = require('fs');
 const path = require('path');
 const Report = require('../models/Report');
 
 const router = express.Router();
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec';
+
+// Helper: Send email via Google Apps Script (bypasses Railway SMTP blocks)
+async function sendEmailViaAppsScript(mailOptions) {
+    const fileBuffer = mailOptions.attachments && mailOptions.attachments[0]
+        ? fs.readFileSync(mailOptions.attachments[0].path)
+        : null;
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            to: mailOptions.to,
+            subject: mailOptions.subject,
+            html: mailOptions.html,
+            filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
+            pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
+        })
+    });
+    const data = await response.json();
+    if (data.status !== 'success') throw new Error(data.message || 'Apps Script email failed');
+    return data;
+}
 
 // GET /api/reports — comprehensive report data
 router.get('/', auth, async (req, res) => {
@@ -76,9 +98,7 @@ router.post('/email/legacy', auth, async (req, res) => {
         const totalCredits = projects.reduce((s, p) => s + p.credits, 0);
         const totalEmissions = energyData.reduce((s, e) => s + e.carbon, 0);
 
-
         const mailOptions = {
-            
             to: targetEmail,
             subject: 'Carbonil Pasumai - Carbon Assessment Report (Summary)',
             html: `
@@ -101,23 +121,9 @@ router.post('/email/legacy', auth, async (req, res) => {
         };
 
         try {
-            const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
-            const response = await fetch('https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    to: mailOptions.to,
-                    subject: mailOptions.subject,
-                    html: mailOptions.html,
-                    filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
-                    pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
-                })
-            });
-            const data = await response.json();
-            if (data.status !== 'success') throw new Error(data.message || 'Apps Script failed');
+            await sendEmailViaAppsScript(mailOptions);
         } catch (emailErr) {
-            console.error('Email sending blocked (likely Railway SMTP port restriction):', emailErr.message);
-            // Continue execution so the report is still processed
+            console.error('Legacy email error:', emailErr.message);
         }
         res.json({ message: 'Legacy report processed successfully.' });
     } catch (err) {
@@ -180,11 +186,8 @@ router.post('/email', auth, async (req, res) => {
         // 1. Generate PDF
         const { filePath, reportId, aiAnalysis } = await generatePDFReport(user, energySummary, projectSummary, monthlyTrends);
 
-
         // 2. Prepare Email Options
-
         const mailOptions = {
-            
             to: targetEmail,
             subject: 'Carbonil Pasumai – AI Carbon Assessment Report',
             html: `
@@ -219,25 +222,12 @@ router.post('/email', auth, async (req, res) => {
             ]
         };
 
-        // 3. Send Email (Wrapped in try-catch because Railway blocks SMTP ports)
+        // 3. Send Email via Google Apps Script
         let emailStatus = 'Sent';
         try {
-            const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
-            const response = await fetch('https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    to: mailOptions.to,
-                    subject: mailOptions.subject,
-                    html: mailOptions.html,
-                    filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
-                    pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
-                })
-            });
-            const data = await response.json();
-            if (data.status !== 'success') throw new Error(data.message || 'Apps Script failed');
+            await sendEmailViaAppsScript(mailOptions);
         } catch (emailErr) {
-            console.error('Email sending blocked by Railway firewall:', emailErr.message);
+            console.error('Email sending failed:', emailErr.message);
             emailStatus = 'Failed';
         }
 
@@ -285,7 +275,6 @@ router.post('/:id/email', auth, async (req, res) => {
         }
 
         const mailOptions = {
-            
             to: targetEmail,
             subject: 'Carbonil Pasumai – AI Carbon Assessment Report',
             html: `
@@ -322,22 +311,9 @@ router.post('/:id/email', auth, async (req, res) => {
 
         let emailStatus = 'Sent';
         try {
-            const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
-            const response = await fetch('https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    to: mailOptions.to,
-                    subject: mailOptions.subject,
-                    html: mailOptions.html,
-                    filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
-                    pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
-                })
-            });
-            const data = await response.json();
-            if (data.status !== 'success') throw new Error(data.message || 'Apps Script failed');
+            await sendEmailViaAppsScript(mailOptions);
         } catch (emailErr) {
-            console.error('Email sending blocked by Railway firewall:', emailErr.message);
+            console.error('Email sending failed:', emailErr.message);
             emailStatus = 'Failed';
         }
         
