@@ -79,7 +79,7 @@ router.post('/email/legacy', auth, async (req, res) => {
         const transporter = await getEmailTransporter();
 
         const mailOptions = {
-            from: 'Carbonil Pasumai <onboarding@resend.dev>',
+            
             to: targetEmail,
             subject: 'Carbonil Pasumai - Carbon Assessment Report (Summary)',
             html: `
@@ -106,14 +106,19 @@ router.post('/email/legacy', auth, async (req, res) => {
 
         try {
             const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
-            const resendData = await resend.emails.send({
-                from: mailOptions.from,
-                to: mailOptions.to,
-                subject: mailOptions.subject,
-                html: mailOptions.html,
-                attachments: fileBuffer ? [{ filename: mailOptions.attachments[0].filename, content: fileBuffer }] : undefined
+            const response = await fetch('https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: mailOptions.to,
+                    subject: mailOptions.subject,
+                    html: mailOptions.html,
+                    filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
+                    pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
+                })
             });
-            if (resendData.error) throw new Error(resendData.error.message);
+            const data = await response.json();
+            if (data.status !== 'success') throw new Error(data.message || 'Apps Script failed');
         } catch (emailErr) {
             console.error('Email sending blocked (likely Railway SMTP port restriction):', emailErr.message);
             // Continue execution so the report is still processed
@@ -186,7 +191,7 @@ router.post('/email', auth, async (req, res) => {
         const transporter = await getEmailTransporter();
 
         const mailOptions = {
-            from: 'Carbonil Pasumai <onboarding@resend.dev>',
+            
             to: targetEmail,
             subject: 'Carbonil Pasumai – AI Carbon Assessment Report',
             html: `
@@ -225,14 +230,19 @@ router.post('/email', auth, async (req, res) => {
         let emailStatus = 'Sent';
         try {
             const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
-            const resendData = await resend.emails.send({
-                from: mailOptions.from,
-                to: mailOptions.to,
-                subject: mailOptions.subject,
-                html: mailOptions.html,
-                attachments: fileBuffer ? [{ filename: mailOptions.attachments[0].filename, content: fileBuffer }] : undefined
+            const response = await fetch('https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: mailOptions.to,
+                    subject: mailOptions.subject,
+                    html: mailOptions.html,
+                    filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
+                    pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
+                })
             });
-            if (resendData.error) throw new Error(resendData.error.message);
+            const data = await response.json();
+            if (data.status !== 'success') throw new Error(data.message || 'Apps Script failed');
         } catch (emailErr) {
             console.error('Email sending blocked by Railway firewall:', emailErr.message);
             emailStatus = 'Failed';
@@ -287,7 +297,7 @@ router.post('/:id/email', auth, async (req, res) => {
         const transporter = await getEmailTransporter();
 
         const mailOptions = {
-            from: 'Carbonil Pasumai <onboarding@resend.dev>',
+            
             to: targetEmail,
             subject: 'Carbonil Pasumai – AI Carbon Assessment Report',
             html: `
@@ -325,14 +335,19 @@ router.post('/:id/email', auth, async (req, res) => {
         let emailStatus = 'Sent';
         try {
             const fileBuffer = mailOptions.attachments && mailOptions.attachments[0] ? fs.readFileSync(mailOptions.attachments[0].path) : null;
-            const resendData = await resend.emails.send({
-                from: mailOptions.from,
-                to: mailOptions.to,
-                subject: mailOptions.subject,
-                html: mailOptions.html,
-                attachments: fileBuffer ? [{ filename: mailOptions.attachments[0].filename, content: fileBuffer }] : undefined
+            const response = await fetch('https://script.google.com/macros/s/AKfycbyYYXTTMVAI1Eqg8frkfAptgiXIDWhFRx5WHxmVObiBNGfHEzy_Yfk3SBlZZEfyR9vbZw/exec', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: mailOptions.to,
+                    subject: mailOptions.subject,
+                    html: mailOptions.html,
+                    filename: mailOptions.attachments && mailOptions.attachments[0] ? mailOptions.attachments[0].filename : '',
+                    pdfBase64: fileBuffer ? fileBuffer.toString('base64') : ''
+                })
             });
-            if (resendData.error) throw new Error(resendData.error.message);
+            const data = await response.json();
+            if (data.status !== 'success') throw new Error(data.message || 'Apps Script failed');
         } catch (emailErr) {
             console.error('Email sending blocked by Railway firewall:', emailErr.message);
             emailStatus = 'Failed';
